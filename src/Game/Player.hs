@@ -1,16 +1,25 @@
-module Game.Player
-(
-  Player(..)
-, Players
-) where
+{-# LANGUAGE RecordWildCards #-}
 
-import Game.Piece (Piece)
+module Game.Player
+  ( Player (..),
+    Players,
+    otherPlayer,
+  )
+where
+
+import Game.Piece (Piece, otherPiece)
 
 type Players = (Player, Player)
 
-data Player =
-  Player {
-    isX      :: Bool
-  , isAI     :: Bool
-  , decision :: Piece -> Bool
+data Player = Player
+  { piece :: Piece,
+    isAI :: Bool
   }
+  deriving (Eq, Show)
+
+otherPlayer :: Player -> Player
+otherPlayer Player {..} =
+  Player
+    { piece = otherPiece piece,
+      isAI = not isAI
+    }

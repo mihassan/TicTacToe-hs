@@ -1,27 +1,22 @@
 module Game.Piece
-(
-  Piece(..)
-, emptyToMove
-, getX
-, getY
-) where
+  ( Piece (..),
+    Location,
+    Move,
+    drawPiece,
+    otherPiece,
+  )
+where
 
-data Piece =  X Int Int
-            | O Int Int
-            | Empty Int Int deriving (Eq, Ord)
+data Piece = X | O deriving (Eq, Show, Read)
 
-emptyToMove :: Bool -> Piece -> Piece
-emptyToMove isX (Empty x y)
-  | isX       = X x y
-  | otherwise = O x y
-emptyToMove _   piece = piece
+type Location = (Int, Int)
 
-getX (X xp _) = xp
-getX (O xp _) = xp
-getY (X _ yp) = yp
-getY (O _ yp) = yp
+type Move = (Int, Int)
 
-instance Show Piece where
-  show (X _ _)     = "X"
-  show (O _ _)     = "O"
-  show (Empty x y) = " "
+drawPiece :: Maybe Piece -> String
+drawPiece Nothing = " "
+drawPiece (Just x) = show x
+
+otherPiece :: Piece -> Piece
+otherPiece X = O
+otherPiece O = X

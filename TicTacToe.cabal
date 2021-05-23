@@ -2,12 +2,11 @@ name:                TicTacToe
 version:             0.1.0.0
 synopsis:            TicTacToe-playing AI
 description:         Please see README.md
-homepage:            https://github.com/caneroj1/TicTacToe-hs
+homepage:            https://github.com/mihassan/TicTacToe-hs
 license:             BSD3
 license-file:        LICENSE
-author:              jcanero
-maintainer:          caneroj1@tcnj.edu
-copyright:           2016 jcanero
+author:              mihassan@gmail.com
+copyright:           2016 jcanero, 2021 mihassan
 category:            Game
 build-type:          Simple
 -- extra-source-files:
@@ -18,18 +17,18 @@ library
   exposed-modules:     Lib
                      , Game.Piece
                      , Game.Board
+                     , Game.Game
                      , Game.Player
-                     , Game.Utils
                      , AI.Minimax
                      , AI.AlphaBeta
-                     , AI.Heuristic
+                     , AI.Strategy
   build-depends:       base >= 4.7 && < 5
                      , text
+                     , composition
                      , split
                      , array
                      , mtl
                      , haskeline
-                     , random
                      , containers
   ghc-options:         -O3
   default-language:    Haskell2010
@@ -40,25 +39,9 @@ executable TicTacToe-exe
   build-depends:       base
                      , TicTacToe
                      , text
-  default-language:    Haskell2010
-
-executable TicTacToe-analysis
-  hs-source-dirs:      app
-  main-is:             Analysis.hs
-  build-depends:       base
-                     , TicTacToe
-                     , text
-  default-language:    Haskell2010
-
-test-suite TicTacToe-test
-  type:                exitcode-stdio-1.0
-  hs-source-dirs:      test
-  main-is:             Spec.hs
-  build-depends:       base
-                     , TicTacToe
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+                     , random
   default-language:    Haskell2010
 
 source-repository head
   type:     git
-  location: https://github.com/githubuser/TicTacToe
+  location: https://github.com/mihassan/TicTacToe-hs

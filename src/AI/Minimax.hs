@@ -1,45 +1,26 @@
 module AI.Minimax
-(
-  minimax
-, MinMax(..)
-) where
+  ( minimax,
+  )
+where
 
-import Game.Board
-import Game.Piece
-import Data.List (maximumBy)
-import Data.Foldable (minimumBy)
-import Data.Ord  (comparing)
+import Game.Board (Board, emptyLocations)
+import Game.Game
+  ( Result,
+    computeResult,
+    makeMove,
+    oppositeResult,
+  )
+import Game.Piece (Move)
+import Game.Player (Player, otherPlayer)
 
-data MinMax = Minimize |
-              Maximize deriving Eq
-
-minimax :: Board -> MinMax -> Bool -> (Int, Piece)
-minimax board minmax isX
-  | iWon      =
-    case minmax of
-      Maximize -> (1,  Empty 0 0)
-      Minimize -> (-1, Empty 0 0)
-  | iLost     =
-    case minmax of
-      Maximize -> (-1, Empty 0 0)
-      Minimize -> (1,  Empty 0 0)
-  | noMoves   =   (0,  Empty 0 0)
-  | otherwise =
-    case minmax of
-      Maximize -> maximumBy (comparing fst) $
-                  zip (map (fst . runNextMM board Minimize (not isX)) currMoves)
-                      currMoves
-      Minimize -> minimumBy (comparing fst) $
-                  zip (map (fst . runNextMM board Maximize (not isX)) currMoves)
-                      currMoves
-  where
-    currMoves     = map (emptyToMove isX) $ moves board
-    iLost
-      | not isX   = victory board allXs
-      | otherwise = victory board allOs
-    iWon
-      | isX       = victory board allXs
-      | otherwise = victory board allOs
-    noMoves       = null currMoves
-    runNextMM brd minOrMax isX piece =
-      minimax (addPiece piece brd) minOrMax isX
+minimax :: Board -> Player -> (Result, Maybe Move)
+minimax board player = case computeResult board player of
+  Just result -> (result, Nothing)
+  Nothing ->
+    let candidateMoves = emptyLocations board
+        nextBoards = makeMove board player <$> candidateMoves
+        nextPlayer = otherPlayer player
+        results = fst . (`minimax` nextPlayer) <$> nextBoards
+        outcomes = zip results candidateMoves
+        (bestResult, bestMove) = minimum outcomes
+     in (oppositeResult bestResult, Just bestMove)

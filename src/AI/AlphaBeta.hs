@@ -1,93 +1,47 @@
+{-# LANGUAGE RecordWildCards #-}
+
 module AI.AlphaBeta
-(
-  alphaBeta
-) where
+  ( alphaBeta,
+  )
+where
 
-import Game.Board
-import Game.Piece
+import Control.Monad
 import Control.Monad.State
-import AI.Minimax
-import Data.Maybe (fromJust, isJust)
-import Data.Foldable (minimumBy)
-import AI.Heuristic
-import Data.List (maximumBy)
-import Data.Ord (comparing)
-
-data AlphaBeta = Alpha Int | Beta Int   deriving Show
-data Choice    = AlphaPrune | BetaPrune deriving Show
+import Game.Board
+  ( Board,
+    Line,
+    allLines,
+    countPiecesOnLine,
+    emptyLocations,
+  )
+import Game.Game (gameFinished, makeMove)
+import Game.Piece (Move, otherPiece)
+import Game.Player (Player (..), otherPlayer)
 
 type Alpha = Int
-type Beta  = Int
-type Depth = Maybe Int
 
-runMaxDepth :: Board -> MinMax -> Bool -> [Piece] -> (Int, Piece)
-runMaxDepth board minmax isX moves =
-  case minmax of
-    Maximize -> heuristicBestMove maximumBy 1
-    Minimize -> heuristicBestMove minimumBy (-1)
+type Beta = Int
+
+type Depth = Int
+
+evaluate :: Board -> Player -> Int
+evaluate board player = sum $ evaluateLine board player <$> allLines
+
+evaluateLine :: Board -> Player -> Line -> Int
+evaluateLine board Player {..} line = absScore * signum (playersPieces - otherPieces)
   where
-    heuristicBestMove selectFn modifier =
-      selectFn (comparing fst ) $
-        zip (map ((* modifier) . flip sumOfWinPaths isX . flip addPiece board)
-                  moves)
-            moves
+    playersPieces = countPiecesOnLine piece board line
+    otherPieces = countPiecesOnLine (otherPiece piece) board line
+    absScore = 10 ^ abs (playersPieces - otherPieces)
 
-alphaBeta :: Board -> MinMax -> Bool -> Alpha -> Beta -> Depth -> (Int, Piece)
-alphaBeta board minmax isX alpha beta depth
-  | iWon      =
-    case minmax of
-      Maximize -> (100,  Empty 0 0)
-      Minimize -> (-100, Empty 0 0)
-  | iLost     =
-    case minmax of
-      Maximize -> (-100, Empty 0 0)
-      Minimize -> (100,  Empty 0 0)
-
-  | noMoves   =   (0,  Empty 0 0)
-
-  | reachedMaxDepth = runMaxDepth board minmax isX currMoves
-
-  | otherwise =
-    case minmax of
-      Maximize -> runAlphaBetaPrune currMoves board alpha beta BetaPrune
-      Minimize -> runAlphaBetaPrune currMoves board alpha beta AlphaPrune
+alphaBeta :: Board -> Player -> Alpha -> Beta -> Depth -> (Int, Maybe Move)
+alphaBeta board player alpha beta depth
+  | depth == 0 || gameFinished board player = (evaluate board player, Nothing)
+  | otherwise = (`execState` (alpha, Nothing)) $ mapM go (emptyLocations board)
   where
-    reachedMaxDepth = isJust depth && 0 == fromJust depth
-
-    nd     =
-      case depth of
-        Just d -> Just (d - 1)
-        _      -> Nothing
-
-    currMoves     =  map (emptyToMove isX) $ moves board
-    iLost
-      | not isX   = victory board allXs
-      | otherwise = victory board allOs
-    iWon
-      | isX       = victory board allXs
-      | otherwise = victory board allOs
-    noMoves       = null currMoves
-
-    runAlphaBetaPrune mvs brd al bt choice =
-      case choice of
-        AlphaPrune -> go mvs brd (Beta bt ) Nothing -- when minimizing
-        BetaPrune  -> go mvs brd (Alpha al) Nothing -- when maximizing
-      where
-        go []        _     (Alpha alpha) bestMove = (alpha, fromJust bestMove)
-        go []        _     (Beta  beta ) bestMove = (beta,  fromJust bestMove)
-
-        go (mv:mvss) board (Alpha alpha) bestMove
-          | v > bt    = (bt, mv)
-          | otherwise = go mvss brd newAlpha newBestMove
-          where
-            v = fst $ alphaBeta (addPiece mv brd) Minimize (not isX) alpha bt nd
-            newAlpha    = if v > alpha then Alpha v else Alpha alpha
-            newBestMove = if v > alpha then Just mv else bestMove
-
-        go (mv:mvss) board (Beta beta) bestMove
-          | v < al    = (al, mv)
-          | otherwise = go mvss brd newBeta newBestMove
-          where
-            v = fst $ alphaBeta (addPiece mv brd) Maximize (not isX) al beta nd
-            newBeta     = if v < beta then Beta v else Beta beta
-            newBestMove = if v < beta then Just mv else bestMove
+    go :: Move -> State (Int, Maybe Move) ()
+    go move = do
+      alpha' <- gets fst
+      let (score, _) = alphaBeta (makeMove board player move) (otherPlayer player) (- beta) (- alpha') (depth - 1)
+      when (alpha' < beta && - score > alpha') $ do
+        put (- score, Just move)
